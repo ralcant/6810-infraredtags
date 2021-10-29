@@ -1,0 +1,3 @@
+opencv-python # either from here or install from source
+qrcode[pil] #also installs Pillow
+pyzbar #more installation at https://pypi.org/project/pyzbar/
