@@ -9,7 +9,7 @@ def convert_to_qr(link, output=None):
     print(img)
     # img = cv2.resize(img, (100, 100))
     if output is not None:
-        cv2.imwrite("./test.png", img)
+        cv2.imwrite(output, img)
 
     # while True:
     #     cv2.imshow("qr code", img)
@@ -18,5 +18,5 @@ def convert_to_qr(link, output=None):
 
 if __name__ == '__main__':
     link = "www.google.com"
-    # output = ""
+    output = "./test.png"
     convert_to_qr(link)
