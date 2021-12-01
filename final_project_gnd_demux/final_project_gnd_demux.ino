@@ -2,41 +2,38 @@
 #include <math.h>
 #include <string.h>
 
+// --- SHIFT REGISTERS ---
+int latchPin = 21;
+int clockPin = 23;
+int dataPin = 22;
+ 
+byte leds[3] = {0, 0, 0};
+int byte_size = 8;
+// -----------------------
+
+
+// ------- WIFI ------
 char host[] = "qrcode-backend-application.herokuapp.com";
 
 //Some constants and some resources:
 const int RESPONSE_TIMEOUT = 6000; //ms to wait for response from host
 const uint16_t OUT_BUFFER_SIZE = 5000; //size of buffer to hold HTTP response
-char network[] = "MIT";  //SSID for 6.08 Lab
-char password[] = ""; //Password for 6.08 Lab
-
-// QR CODE MAXTRIX TO GO HERE
-
+char network[] = "MIT";
+char password[] = "";
 char QR_MATRIX[23][23];
-
 boolean gotQR = false;
+// -------------------
 
-//--- Multiplexer input pins (for ESP32) ---
-//-------------ROWS-------------------
-int top_row_select_0 =    13;
-int top_row_select_1 =    14;
-int top_row_select_2 =    27;
-int top_row_select_3 =    26;
+//----------- GROUND ----------------
+int top_gnd_select_0 =    19;
+int top_gnd_select_1 =    18;
+int top_gnd_select_2 =    5;
+int top_gnd_select_3 =    17;
 //------------------------------------
-int bottom_row_select_0 = 21;
-int bottom_row_select_1 = 25;
-int bottom_row_select_2 = 22;
-int bottom_row_select_3 = 23;
-//------------COLUMNS-----------------
-int top_col_select_0 =    19;
-int top_col_select_1 =    18;
-int top_col_select_2 =    5;
-int top_col_select_3 =    17;
-//------------------------------------
-int bottom_col_select_0 = 15;
-int bottom_col_select_1 = 2;
-int bottom_col_select_2 = 4;
-int bottom_col_select_3 = 16;
+int bottom_gnd_select_0 = 16;
+int bottom_gnd_select_1 = 4;
+int bottom_gnd_select_2 = 2;
+int bottom_gnd_select_3 = 15;
 //------------------------------------
 
 void do_http_request(char* host, char* request, char* response, uint16_t response_size, uint16_t response_timeout, uint8_t serial) {
@@ -93,33 +90,23 @@ void setup() {
   // put your setup code here, to run once:
   Serial.begin(9600);
 
-  pinMode(top_row_select_0, OUTPUT);
-  pinMode(top_row_select_1, OUTPUT);
-  pinMode(top_row_select_2, OUTPUT);
-  pinMode(top_row_select_3, OUTPUT);
-
-  pinMode(bottom_row_select_0, OUTPUT);
-  pinMode(bottom_row_select_1, OUTPUT);
-  pinMode(bottom_row_select_2, OUTPUT);
-  pinMode(bottom_row_select_3, OUTPUT);
+  pinMode(latchPin, OUTPUT);
+  pinMode(dataPin, OUTPUT);  
+  pinMode(clockPin, OUTPUT);
   
-  pinMode(top_col_select_0, OUTPUT);
-  pinMode(top_col_select_1, OUTPUT);
-  pinMode(top_col_select_2, OUTPUT);
-  pinMode(top_col_select_3, OUTPUT);
+  pinMode(top_gnd_select_0, OUTPUT);
+  pinMode(top_gnd_select_1, OUTPUT);
+  pinMode(top_gnd_select_2, OUTPUT);
+  pinMode(top_gnd_select_3, OUTPUT);
 
-  pinMode(bottom_col_select_0, OUTPUT);
-  pinMode(bottom_col_select_1, OUTPUT);
-  pinMode(bottom_col_select_2, OUTPUT);
-  pinMode(bottom_col_select_3, OUTPUT);
+  pinMode(bottom_gnd_select_0, OUTPUT);
+  pinMode(bottom_gnd_select_1, OUTPUT);
+  pinMode(bottom_gnd_select_2, OUTPUT);
+  pinMode(bottom_gnd_select_3, OUTPUT);
 
   for (int i = 0; i < 23; i++){
     for (int j = 0; j < 23; j++){
-      if (i%2==0){
-        QR_MATRIX[i][j] = 'W';
-      } else {
-        QR_MATRIX[i][j] = 'B';
-      }
+      QR_MATRIX[i][j] = 'B';
     }
   }
 
@@ -174,70 +161,56 @@ void loop() {
     gotQR = true;
   }
   
-  for (int i = 0; i <23; i++){
-    for (int j = 0; j <23; j++){
-      if (QR_MATRIX[i][j] == 'W'){
-        selectChannelOutRow(i);
-        selectChannelOutCol(j);
-        delay(2);
+  
+  for (int anode = 0; anode <23; anode++){
+    leds[0] = 0;
+    leds[1] = 0;
+    leds[2] = 0;
+    for (int cathode = 0; cathode <23; cathode++){
+      
+      if (QR_MATRIX[cathode][anode] == 'W'){
+        bitSet(leds[cathode/byte_size], cathode%byte_size);
       }
     }
-  }
-  
-}
-
-//----- TODO: Set Select ROW Pin Values -----
-void selectChannelOutRow(int channel) {
-    int select_3_write = (((channel%12) & 8) == 8) ? HIGH : LOW;
-    int select_2_write = (((channel%12) & 4) == 4) ? HIGH : LOW;
-    int select_1_write = (((channel%12) & 2) == 2) ? HIGH : LOW;
-    int select_0_write = (((channel%12) & 1) == 1) ? HIGH : LOW;
-
-    if (channel < 12){
-      digitalWrite(bottom_row_select_0, HIGH);
-      digitalWrite(bottom_row_select_1, HIGH);
-      digitalWrite(bottom_row_select_2, HIGH);
-      digitalWrite(bottom_row_select_3, HIGH);  
-      digitalWrite(top_row_select_0, select_0_write);
-      digitalWrite(top_row_select_1, select_1_write);
-      digitalWrite(top_row_select_2, select_2_write);
-      digitalWrite(top_row_select_3, select_3_write);  
-    } else {
-      digitalWrite(top_row_select_0, HIGH);
-      digitalWrite(top_row_select_1, HIGH);
-      digitalWrite(top_row_select_2, HIGH);
-      digitalWrite(top_row_select_3, HIGH);  
-      digitalWrite(bottom_row_select_0, select_0_write);
-      digitalWrite(bottom_row_select_1, select_1_write);
-      digitalWrite(bottom_row_select_2, select_2_write);
-      digitalWrite(bottom_row_select_3, select_3_write);      
-    }
+    selectChannelOutGnd(anode);
+    updateShiftRegister();
+    delay(2);
+  } 
 }
 
 //----- TODO: Set Select COL Pin Values -----
-void selectChannelOutCol(int channel) {
+void selectChannelOutGnd(int channel) {
     int select_3_write = (((channel%12) & 8) == 8) ? HIGH : LOW;
     int select_2_write = (((channel%12) & 4) == 4) ? HIGH : LOW;
     int select_1_write = (((channel%12) & 2) == 2) ? HIGH : LOW;
     int select_0_write = (((channel%12) & 1) == 1) ? HIGH : LOW;
 
     if (channel < 12){
-      digitalWrite(bottom_col_select_0, HIGH);
-      digitalWrite(bottom_col_select_1, HIGH);
-      digitalWrite(bottom_col_select_2, HIGH);
-      digitalWrite(bottom_col_select_3, HIGH);
-      digitalWrite(top_col_select_0, select_0_write);
-      digitalWrite(top_col_select_1, select_1_write);
-      digitalWrite(top_col_select_2, select_2_write);
-      digitalWrite(top_col_select_3, select_3_write); 
+      digitalWrite(bottom_gnd_select_0, HIGH);
+      digitalWrite(bottom_gnd_select_1, HIGH);
+      digitalWrite(bottom_gnd_select_2, HIGH);
+      digitalWrite(bottom_gnd_select_3, HIGH);
+      digitalWrite(top_gnd_select_0, select_0_write);
+      digitalWrite(top_gnd_select_1, select_1_write);
+      digitalWrite(top_gnd_select_2, select_2_write);
+      digitalWrite(top_gnd_select_3, select_3_write); 
     } else {
-      digitalWrite(top_col_select_0, HIGH);
-      digitalWrite(top_col_select_1, HIGH);
-      digitalWrite(top_col_select_2, HIGH);
-      digitalWrite(top_col_select_3, HIGH);  
-      digitalWrite(bottom_col_select_0, select_0_write);
-      digitalWrite(bottom_col_select_1, select_1_write);
-      digitalWrite(bottom_col_select_2, select_2_write);
-      digitalWrite(bottom_col_select_3, select_3_write);      
+      digitalWrite(top_gnd_select_0, HIGH);
+      digitalWrite(top_gnd_select_1, HIGH);
+      digitalWrite(top_gnd_select_2, HIGH);
+      digitalWrite(top_gnd_select_3, HIGH);  
+      digitalWrite(bottom_gnd_select_0, select_0_write);
+      digitalWrite(bottom_gnd_select_1, select_1_write);
+      digitalWrite(bottom_gnd_select_2, select_2_write);
+      digitalWrite(bottom_gnd_select_3, select_3_write);      
     } 
+}
+
+void updateShiftRegister()
+{
+   digitalWrite(latchPin, LOW);
+   shiftOut(dataPin, clockPin, MSBFIRST, leds[2]);
+   shiftOut(dataPin, clockPin, MSBFIRST, leds[1]);
+   shiftOut(dataPin, clockPin, MSBFIRST, leds[0]);
+   digitalWrite(latchPin, HIGH);
 }
