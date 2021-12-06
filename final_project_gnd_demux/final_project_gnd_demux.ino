@@ -209,8 +209,8 @@ void selectChannelOutGnd(int channel) {
 void updateShiftRegister()
 {
    digitalWrite(latchPin, LOW);
-   shiftOut(dataPin, clockPin, MSBFIRST, leds[2]);
-   shiftOut(dataPin, clockPin, MSBFIRST, leds[1]);
-   shiftOut(dataPin, clockPin, MSBFIRST, leds[0]);
+   shiftOut(dataPin, clockPin, LSBFIRST, leds[0]);
+   shiftOut(dataPin, clockPin, LSBFIRST, leds[1]);
+   shiftOut(dataPin, clockPin, LSBFIRST, leds[2]);
    digitalWrite(latchPin, HIGH);
 }
